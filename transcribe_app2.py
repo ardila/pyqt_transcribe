@@ -1,9 +1,24 @@
 import sys
 from PyQt6.QtCore import QObject, pyqtSignal
-from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton
+from PyQt6.QtWidgets import QApplication, QMainWindow, QWidget, QPushButton, QLabel, QPlainTextEdit
+from PyQt6.QtCore import Qt
 import pyaudio
 import wave
 import threading
+import whisper
+
+model = whisper.load_model("base")
+
+class Transcriber(QObject):
+    transcription_done = pyqtSignal(str)
+
+    def __init__(self):
+        super().__init__()
+
+    def transcribe(self, filename):
+        result = model.transcribe(filename)
+        transcription = result["text"]
+        self.transcription_done.emit(transcription)
 
 class Recorder():
     def __init__(self, filename):
@@ -46,7 +61,13 @@ class MainWindow(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Audio Recorder")
-        self.setGeometry(100, 100, 200, 100)
+        self.setGeometry(100, 100, 400, 200)
+
+        # Create a label to display transcription
+        self.transcription_edit = QPlainTextEdit(self)
+        self.transcription_edit.setGeometry(30, 70, 340, 100)
+        self.transcription_edit.setReadOnly(True)
+        self.transcription_edit.setPlainText("Transcription will appear here.")
 
         self.record_button = QPushButton("Record", self)
         self.record_button.move(30, 30)
@@ -73,6 +94,15 @@ class MainWindow(QWidget):
 
         self.record_button.setEnabled(True)
         self.stop_button.setEnabled(False)
+
+        self.transcriber = Transcriber()
+        self.transcriber.transcription_done.connect(self.on_transcription_done)
+        self.transcription_edit.setPlainText("Transcribing...")
+        threading.Thread(target=self.transcriber.transcribe, args=("recording.wav",)).start()
+
+    def on_transcription_done(self, transcription):
+        # Create a new label with the updated transcription
+        self.transcription_edit.setPlainText(transcription)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

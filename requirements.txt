@@ -1,4 +1,6 @@
-# brew install pyqt for PyQt5
+# brew install pyqt 
+# brew install sip
+# for PyQt5
 # openai-whisper
 # brew install portaudio
 # brew install sip
